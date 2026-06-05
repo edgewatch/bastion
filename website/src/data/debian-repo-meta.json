@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-06-04T12:36:43.723Z",
+  "origin": "Edgewatch Bastion",
+  "label": "bastion-base",
+  "suite": "trixie",
+  "component": "main",
+  "architecture": "amd64",
+  "packageName": "bastion-base",
+  "repoBasePath": "/debian/bastion",
+  "repoBaseUrl": "https://download.edgewatch.com/debian/bastion",
+  "aptSourceLine": "deb [trusted=yes] https://download.edgewatch.com/debian/bastion trixie main",
+  "deb": {
+    "filename": "Bastion-base_1.29.2.5-20260604082055+git90c6a4fd.deb13_amd64.deb",
+    "version": "1.29.2.5-20260604082055+git90c6a4fd.deb13",
+    "sizeBytes": 41702288,
+    "sizeHuman": "39.8 MB",
+    "sha256": "c81514cf9586f3ef24a4de3277b6a5ab3f6a3d96b43a64cd1a1544dc88634a49",
+    "poolRelativePath": "pool/main/b/bastion-base/Bastion-base_1.29.2.5-20260604082055+git90c6a4fd.deb13_amd64.deb",
+    "publishedAt": "2026-06-04"
+  },
+  "releases": [
+    {
+      "filename": "Bastion-base_1.29.2.5-20260604082055+git90c6a4fd.deb13_amd64.deb",
+      "version": "1.29.2.5-20260604082055+git90c6a4fd.deb13",
+      "sizeBytes": 41702288,
+      "sizeHuman": "39.8 MB",
+      "sha256": "c81514cf9586f3ef24a4de3277b6a5ab3f6a3d96b43a64cd1a1544dc88634a49",
+      "poolRelativePath": "pool/main/b/bastion-base/Bastion-base_1.29.2.5-20260604082055+git90c6a4fd.deb13_amd64.deb",
+      "publishedAt": "2026-06-04",
+      "tag": "v1.0.2",
+      "releaseUrl": "https://github.com/edgewatch/bastion/releases/tag/v1.0.2",
+      "isLatest": true
+    },
+    {
+      "filename": "Bastion-base_1.29.2.4-20260521141814+git89293b4f.deb13_amd64.deb",
+      "version": "1.29.2.4-20260521141814+git89293b4f.deb13",
+      "sizeBytes": 40790216,
+      "sizeHuman": "38.9 MB",
+      "sha256": "f65c40153cc4aea1804927d1f0c7388dd8f2a72646f2b29369220415ec26b702",
+      "poolRelativePath": "pool/main/b/bastion-base/Bastion-base_1.29.2.4-20260521141814+git89293b4f.deb13_amd64.deb",
+      "publishedAt": "2026-05-21",
+      "tag": "v1.0.0",
+      "releaseUrl": "https://github.com/edgewatch/bastion/releases/tag/v1.0.0",
+      "isLatest": false
+    }
+  ],
+  "github": {
+    "repo": "edgewatch/bastion",
+    "tag": "v1.0.2",
+    "releaseUrl": "https://github.com/edgewatch/bastion/releases/tag/v1.0.2"
+  },
+  "urls": {
+    "suiteIndex": "https://download.edgewatch.com/debian/bastion/dists/trixie/",
+    "release": "https://download.edgewatch.com/debian/bastion/dists/trixie/Release",
+    "packages": "https://download.edgewatch.com/debian/bastion/dists/trixie/main/binary-amd64/Packages",
+    "poolPackageDir": "https://download.edgewatch.com/debian/bastion/pool/main/b/bastion-base/"
+  }
+}

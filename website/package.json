@@ -1,0 +1,44 @@
+{
+  "name": "edgewatch-bastion-docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Docusaurus documentation site for bastion-base (formerly edgewatch-bastion-base).",
+  "scripts": {
+    "generate:debian-repo": "node scripts/generate-debian-repo.mjs",
+    "prebuild": "node scripts/generate-debian-repo.mjs",
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve",
+    "clear": "docusaurus clear",
+    "deploy": "docusaurus deploy",
+    "deploy:production": "ORGANIZATION_NAME=edgewatch PROJECT_NAME=bastion DOCS_URL=https://download.edgewatch.com BASE_URL=/ docusaurus deploy"
+  },
+  "dependencies": {
+    "@docusaurus/core": "3.10.1",
+    "@docusaurus/preset-classic": "3.10.1",
+    "@mdx-js/react": "^3.0.0",
+    "clsx": "^2.0.0",
+    "prism-react-renderer": "^2.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {},
+  "overrides": {
+    "serialize-javascript": "7.0.5"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 3 chrome version",
+      "last 3 firefox version",
+      "last 5 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0"
+  }
+}

@@ -1,0 +1,45 @@
+/* Pages-only landing: no global navbar or Docusaurus footer */
+.navbar,
+.footer {
+  display: none !important;
+}
+
+/* Installation doc: single page, no sidebar chrome */
+.theme-doc-sidebar-container {
+  display: none !important;
+}
+
+.theme-doc-main {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+:root {
+  --ifm-color-primary: #0f766e;
+  --ifm-color-primary-dark: #0d6a63;
+  --ifm-color-primary-darker: #0c645e;
+  --ifm-color-primary-darkest: #0a524d;
+  --ifm-color-primary-light: #118279;
+  --ifm-color-primary-lighter: #12887f;
+  --ifm-color-primary-lightest: #149a90;
+  --ifm-code-font-size: 95%;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #2dd4bf;
+  --ifm-color-primary-dark: #26bfae;
+  --ifm-color-primary-darker: #24b4a4;
+  --ifm-color-primary-darkest: #1d9587;
+  --ifm-color-primary-light: #45d9c7;
+  --ifm-color-primary-lighter: #52dccb;
+  --ifm-color-primary-lightest: #78e4d7;
+}
+
+.theme-doc-markdown h1 {
+  letter-spacing: -0.03em;
+}
+
+.theme-doc-markdown table {
+  display: table;
+  width: 100%;
+}
