@@ -15,7 +15,10 @@ import {
 import {
   DEBIAN_REPO_READY,
   debianRepoMeta,
+  debianRepoPackages,
+  debianRepoPoolUrl,
   debianRepoReleases,
+  type DebianRepoPackage,
 } from './debian-repo';
 
 export {APT_SOURCE_LINE, DEBIAN_REPO_BASE_URL, DEBIAN_SUITE_INDEX_URL};
@@ -156,6 +159,64 @@ const currentDeb: DownloadArtifact = {
     : olderVersionsFallback,
 };
 
+// ── Additional packages (e.g. bastion-telemetry) ────────────────────────────
+// Generated from the multi-package apt metadata so every Edgewatch Bastion
+// package published to GitHub Releases is listed and downloadable from the
+// same static archive. The primary package (bastion-base) keeps its richer,
+// env-overridable card above; secondary packages are rendered generically.
+const PACKAGE_DESCRIPTIONS: Record<string, string> = {
+  'bastion-telemetry':
+    'Node/telemetry agent (ew-node-agent + ewctl) for Debian 13 (Trixie), amd64. Maintains the outbound mTLS connection to the Edgewatch endpoint: enrollment, signed config pull, heartbeats, command execution and telemetry. Requires bastion-base (apt resolves it automatically: it is declared as Depends: bastion-base, ca-certificates). Install with "sudo apt install bastion-telemetry".',
+};
+
+function packageReleaseArtifacts(pkg: DebianRepoPackage): DownloadArtifact[] {
+  return pkg.releases.map((release) => ({
+    id: `${pkg.packageName}-deb-${release.version}`,
+    filename: release.filename,
+    size: release.sizeHuman || 'Release',
+    date: release.publishedAt || '—',
+    sha256:
+      release.sha256 ||
+      'Download the matching .sha256 asset from the release tag on GitHub.',
+    sha256Placeholder: !release.sha256,
+    downloadHref: debianRepoPoolUrl(release.poolRelativePath),
+    secondaryActions: [
+      {
+        label: 'CHECKSUM',
+        href: releaseChecksumUrl(release.tag, release.filename),
+        title: 'Download the published SHA256 sidecar from GitHub',
+      },
+      {
+        label: 'RELEASE',
+        href: release.releaseUrl,
+        title: 'Open the GitHub release page (notes and assets)',
+      },
+    ],
+    olderVersions: [],
+  }));
+}
+
+function packageSection(pkg: DebianRepoPackage): ProductSection {
+  const artifacts = packageReleaseArtifacts(pkg);
+  const current = artifacts[0];
+  if (current) {
+    current.olderVersions = artifacts.slice(1);
+  }
+  return {
+    id: `${pkg.packageName}-deb`,
+    title: `${pkg.packageName} — Debian package`,
+    description:
+      PACKAGE_DESCRIPTIONS[pkg.packageName] ||
+      `Installable amd64 package for Debian 13 (Trixie), suite trixie, component main. Served from the static Debian archive under /debian/bastion/ and mirrored from GitHub Releases. Install with "sudo apt install ${pkg.packageName}".`,
+    artifacts: current ? [current] : [],
+  };
+}
+
+const primaryPackageName = debianRepoMeta.packageName;
+const extraPackageSections: ProductSection[] = debianRepoPackages
+  .filter((pkg) => pkg.packageName !== primaryPackageName && pkg.releases.length)
+  .map(packageSection);
+
 export const downloadSections: ProductSection[] = [
   {
     id: 'bastion-deb',
@@ -164,6 +225,7 @@ export const downloadSections: ProductSection[] = [
       'Installable amd64 package for Debian 13 (Trixie), suite trixie, component main. Served as a static Debian archive under /debian/bastion/ (Apache-style indexes) and mirrored from GitHub Releases on tagged pipelines. Use apt with the sources.list line on the downloads page or install the .deb directly.',
     artifacts: [currentDeb],
   },
+  ...extraPackageSections,
   {
     id: 'bastion-iso',
     title: 'Live / ISO images',

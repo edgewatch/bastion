@@ -3,7 +3,16 @@
  * Generate a static Debian APT repository under static/debian/bastion/
  * with Apache-style directory index pages, Release, and Packages metadata.
  *
- * Fetches the latest .deb from GitHub Releases (edgewatch/bastion) unless
+ * The repository is MULTI-PACKAGE: it indexes every Edgewatch Bastion .deb
+ * published on GitHub Releases (currently `bastion-base` and
+ * `bastion-telemetry`). Any release asset whose filename matches
+ * `Bastion-*_<version>_<arch>.deb` (case-insensitive) and is a Debian package
+ * is placed in its own apt pool directory (pool/<comp>/<letter>/<pkg>/) and
+ * listed in the generated Packages file, so clients can
+ * `apt-get install bastion-base` and `apt-get install bastion-telemetry` from
+ * the same `deb ... trixie main` source line.
+ *
+ * Fetches .deb assets from GitHub Releases (edgewatch/bastion) unless
  * DEBIAN_REPO_DEB_PATH points at a local file. When DEBIAN_REPO_DEB_PATH is
  * set the GitHub API call is skipped, and metadata is derived from the
  * supplied file (basename / size / sha256).
@@ -31,29 +40,28 @@ const WEBSITE_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(WEBSITE_ROOT, '..');
 const REPO_SLUG = 'bastion';
 const ORIGIN = 'Edgewatch Bastion';
-const LABEL = 'bastion-base';
+// Repo-wide Release label (the archive now hosts more than one package).
+const LABEL = 'bastion';
 const SUITE = process.env.DEBIAN_REPO_SUITE || 'trixie';
 const COMPONENT = process.env.DEBIAN_REPO_COMPONENT || 'main';
 const ARCH = process.env.DEBIAN_REPO_ARCH || 'amd64';
 const BINARY_DIR = `binary-${ARCH}`;
-// Debian Policy §5.6.7 requires Package names to be lowercase.
-const PKG_NAME = 'bastion-base';
-// The .deb filename uses a capital 'B' so the published asset filename is
-// `Bastion-base_<version>_<arch>.deb`. Debian/apt tooling accepts this since
-// only the `Package:` control field is required to be lowercase.
-const PKG_FILE_PREFIX = 'Bastion-base';
-const PKG_FILE_PREFIX_LC = PKG_FILE_PREFIX.toLowerCase();
-const POOL_LETTER = PKG_NAME.charAt(0).toLowerCase();
+// The primary package whose data is mirrored into the back-compat top-level
+// fields of debian-repo-meta.json (kept so existing consumers keep working).
+const PRIMARY_PKG = 'bastion-base';
+// Any Edgewatch Bastion package asset. Debian Policy §5.6.7 requires Package
+// names to be lowercase; the published .deb filename uses a capital 'B'
+// (`Bastion-base`, `Bastion-telemetry`), which apt tooling accepts.
+const ASSET_RE = new RegExp(`^(bastion-[a-z0-9][a-z0-9.+-]*)_(.+)_${ARCH}\\.deb$`, 'i');
 const GITHUB_REPO = process.env.DOWNLOAD_GITHUB_REPO || 'edgewatch/bastion';
-const SITE_URL =
-  process.env.DOCS_URL || 'https://download.edgewatch.com';
+const SITE_URL = process.env.DOCS_URL || 'https://download.edgewatch.com';
 const REPO_BASE_PATH = `/debian/${REPO_SLUG}`;
 const REPO_BASE_URL = `${SITE_URL.replace(/\/$/, '')}${REPO_BASE_PATH}`;
 const SKIP_DOWNLOAD = process.env.DEBIAN_REPO_SKIP_DOWNLOAD === '1';
 const LOCAL_DEB = process.env.DEBIAN_REPO_DEB_PATH?.trim() || '';
 
 const OUT_ROOT = path.join(WEBSITE_ROOT, 'static', 'debian', REPO_SLUG);
-const POOL_PKG_DIR = path.join(OUT_ROOT, 'pool', COMPONENT, POOL_LETTER, PKG_NAME);
+const POOL_ROOT = path.join(OUT_ROOT, 'pool');
 const DIST_SUITE = path.join(OUT_ROOT, 'dists', SUITE);
 const DIST_BINARY = path.join(DIST_SUITE, COMPONENT, BINARY_DIR);
 const META_JSON = path.join(WEBSITE_ROOT, 'src', 'data', 'debian-repo-meta.json');
@@ -82,10 +90,27 @@ async function sha256File(filePath) {
 }
 
 function isPkgDebAsset(name) {
-  if (!name.toLowerCase().endsWith(`_${ARCH}.deb`)) {
-    return false;
-  }
-  return name.toLowerCase().startsWith(`${PKG_FILE_PREFIX_LC}_`);
+  return ASSET_RE.test(name);
+}
+
+/** Lowercase Debian package name derived from a Bastion-*_*.deb filename. */
+function packageNameFromFilename(name) {
+  const m = name.match(ASSET_RE);
+  return m ? m[1].toLowerCase() : '';
+}
+
+/** Version string embedded in a Bastion-*_<version>_<arch>.deb filename. */
+function parseDebVersion(filename) {
+  const m = filename.match(ASSET_RE);
+  return m ? m[2] : '';
+}
+
+function poolLetter(pkgName) {
+  return pkgName.charAt(0).toLowerCase();
+}
+
+function poolDirFor(pkgName) {
+  return path.join(POOL_ROOT, COMPONENT, poolLetter(pkgName), pkgName);
 }
 
 function ghHeaders() {
@@ -104,29 +129,36 @@ function ghHeaders() {
   return headers;
 }
 
-function normalizeRelease(rel) {
-  const debAsset = (rel.assets || []).find(
+/**
+ * Return one entry per matching .deb asset in a release (a single release may
+ * carry both bastion-base and bastion-telemetry assets).
+ */
+function entriesFromRelease(rel) {
+  const debAssets = (rel.assets || []).filter(
     (a) =>
       isPkgDebAsset(a.name) &&
       a.content_type === 'application/vnd.debian.binary-package',
   );
-  if (!debAsset) {
-    return null;
-  }
-  const shaMatch = rel.body?.match(
-    new RegExp(`${debAsset.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\n]*SHA256:\\s*([a-f0-9]{64})`, 'i'),
-  );
-  return {
-    tag: rel.tag_name,
-    publishedAt: rel.published_at,
-    prerelease: Boolean(rel.prerelease),
-    deb: {
-      name: debAsset.name,
-      size: debAsset.size,
-      url: debAsset.browser_download_url,
-      sha256: debAsset.digest?.replace(/^sha256:/i, '') || shaMatch?.[1] || '',
-    },
-  };
+  return debAssets.map((debAsset) => {
+    const shaMatch = rel.body?.match(
+      new RegExp(
+        `${debAsset.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\n]*SHA256:\\s*([a-f0-9]{64})`,
+        'i',
+      ),
+    );
+    return {
+      packageName: packageNameFromFilename(debAsset.name),
+      tag: rel.tag_name,
+      publishedAt: rel.published_at,
+      prerelease: Boolean(rel.prerelease),
+      deb: {
+        name: debAsset.name,
+        size: debAsset.size,
+        url: debAsset.browser_download_url,
+        sha256: debAsset.digest?.replace(/^sha256:/i, '') || shaMatch?.[1] || '',
+      },
+    };
+  });
 }
 
 async function fetchAllReleases() {
@@ -148,17 +180,15 @@ async function fetchAllReleases() {
       if (rel.draft) {
         continue;
       }
-      const info = normalizeRelease(rel);
-      if (!info) {
-        continue;
+      for (const info of entriesFromRelease(rel)) {
+        // Deduplicate by .deb filename. The API returns releases newest-first,
+        // so the first occurrence (newest) wins if a version was re-released.
+        if (seen.has(info.deb.name)) {
+          continue;
+        }
+        seen.add(info.deb.name);
+        collected.push(info);
       }
-      // Deduplicate by .deb filename. The API returns releases newest-first,
-      // so the first occurrence (newest) wins if a version was re-released.
-      if (seen.has(info.deb.name)) {
-        continue;
-      }
-      seen.add(info.deb.name);
-      collected.push(info);
     }
     if (releases.length < 100) {
       break;
@@ -166,7 +196,7 @@ async function fetchAllReleases() {
   }
   if (collected.length === 0) {
     throw new Error(
-      `No releases expose a ${PKG_FILE_PREFIX}_*_${ARCH}.deb asset in ${GITHUB_REPO}`,
+      `No releases expose a Bastion-*_${ARCH}.deb asset in ${GITHUB_REPO}`,
     );
   }
   return collected;
@@ -176,14 +206,14 @@ function releaseInfoFromLocal(filePath) {
   const name = path.basename(filePath);
   if (!isPkgDebAsset(name)) {
     throw new Error(
-      `DEBIAN_REPO_DEB_PATH=${filePath} basename does not match ${PKG_FILE_PREFIX}_*_${ARCH}.deb`,
+      `DEBIAN_REPO_DEB_PATH=${filePath} basename does not match Bastion-*_${ARCH}.deb`,
     );
   }
   return {
+    packageName: packageNameFromFilename(name),
     tag: process.env.DEBIAN_REPO_GITHUB_TAG?.trim() || '',
     publishedAt:
-      process.env.DEBIAN_REPO_PUBLISHED_AT?.trim() ||
-      new Date().toISOString(),
+      process.env.DEBIAN_REPO_PUBLISHED_AT?.trim() || new Date().toISOString(),
     prerelease: false,
     localPath: filePath,
     deb: {
@@ -196,8 +226,9 @@ function releaseInfoFromLocal(filePath) {
 }
 
 async function placeDebInPool(releaseInfo) {
-  await mkdir(POOL_PKG_DIR, {recursive: true});
-  const dest = path.join(POOL_PKG_DIR, releaseInfo.deb.name);
+  const poolPkgDir = poolDirFor(releaseInfo.packageName);
+  await mkdir(poolPkgDir, {recursive: true});
+  const dest = path.join(poolPkgDir, releaseInfo.deb.name);
 
   if (releaseInfo.localPath) {
     log(`Copying local .deb from ${releaseInfo.localPath}`);
@@ -217,33 +248,63 @@ async function placeDebInPool(releaseInfo) {
   return dest;
 }
 
+/** Recursively collect every Bastion-*.deb already present under pool/. */
+async function findPoolDebs() {
+  const found = [];
+  async function walk(dir) {
+    let names;
+    try {
+      names = await readdir(dir, {withFileTypes: true});
+    } catch {
+      return;
+    }
+    for (const ent of names) {
+      const abs = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        await walk(abs);
+      } else if (isPkgDebAsset(ent.name)) {
+        found.push(abs);
+      }
+    }
+  }
+  await walk(POOL_ROOT);
+  return found;
+}
+
 async function reuseExistingPoolDebs() {
-  const existing = (await readdir(POOL_PKG_DIR).catch(() => [])).filter((f) =>
-    isPkgDebAsset(f),
-  );
+  const existing = await findPoolDebs();
   if (existing.length === 0) {
     throw new Error(
       'DEBIAN_REPO_SKIP_DOWNLOAD=1 but no .deb in pool; set DEBIAN_REPO_DEB_PATH or allow download',
     );
   }
-  // Newest filename first for a stable "latest" selection when offline.
-  existing.sort((a, b) => b.localeCompare(a));
-  return existing.map((name) => ({
-    path: path.join(POOL_PKG_DIR, name),
-    info: {tag: '', publishedAt: '', prerelease: false, deb: {name, sha256: ''}},
-  }));
+  // Newest filename first for a stable selection when offline.
+  existing.sort((a, b) => path.basename(b).localeCompare(path.basename(a)));
+  return existing.map((abs) => {
+    const name = path.basename(abs);
+    return {
+      path: abs,
+      info: {
+        packageName: packageNameFromFilename(name),
+        tag: '',
+        publishedAt: '',
+        prerelease: false,
+        deb: {name, sha256: ''},
+      },
+    };
+  });
 }
 
 function generatePackages() {
   // Run with cwd=OUT_ROOT and pass the pool directory as a RELATIVE path so
   // both dpkg-scanpackages and apt-ftparchive emit `Filename: pool/...`
-  // instead of leaking the absolute repo path of the build host.
+  // instead of leaking the absolute repo path of the build host. The scan is
+  // recursive, so every package's pool dir is picked up automatically.
   const cwd = OUT_ROOT;
   const relPool = 'pool';
   let packagesText;
   try {
-    // --multiversion keeps every version of the package in the pool; without
-    // it dpkg-scanpackages emits only the newest version per package name.
+    // --multiversion keeps every version of every package in the pool.
     packagesText = run(
       'dpkg-scanpackages',
       ['--multiversion', '--arch', ARCH, relPool, '/dev/null'],
@@ -283,8 +344,6 @@ function sanitizeFilenameLines(text) {
     let value = line.slice('Filename:'.length).trim();
     const original = value;
 
-    // Strip any leading absolute prefix that matches OUT_ROOT (and its
-    // ancestors). The published path must always be repo-relative.
     for (const prefix of [OUT_ROOT, ...leakNeedles]) {
       if (prefix && value.startsWith(prefix + path.sep)) {
         value = value.slice(prefix.length + 1);
@@ -293,8 +352,6 @@ function sanitizeFilenameLines(text) {
       }
     }
 
-    // If still absolute, drop the leading '/' as a last resort and then
-    // verify there is no residual leak before continuing.
     if (path.isAbsolute(value)) {
       value = value.replace(/^[\\/]+/, '');
     }
@@ -312,7 +369,6 @@ function sanitizeFilenameLines(text) {
       );
     }
     if (!value.startsWith('pool/')) {
-      // Acceptable formats are repo-relative paths under pool/.
       throw new Error(
         `Filename line does not start with 'pool/': '${original}' -> '${value}'`,
       );
@@ -352,30 +408,27 @@ async function writeMinimalRelease(suiteDir, suiteName) {
   body += `Date: ${now}\n`;
   body += `Architectures: ${ARCH}\n`;
   body += `Components: ${COMPONENT}\n`;
-  body += `Description: Edgewatch Bastion Base OpenResty stack\n`;
+  body += `Description: Edgewatch Bastion APT repository (bastion-base, bastion-telemetry)\n`;
   body += 'MD5Sum:\n';
 
   for (const [name, buf] of files) {
     const rel = `${COMPONENT}/${BINARY_DIR}/${name}`;
     const md5 = createHash('md5').update(buf).digest('hex');
-    const size = buf.length;
-    body += ` ${md5} ${size} ${rel}\n`;
+    body += ` ${md5} ${buf.length} ${rel}\n`;
   }
 
   body += 'SHA256:\n';
   for (const [name, buf] of files) {
     const rel = `${COMPONENT}/${BINARY_DIR}/${name}`;
     const sha256 = createHash('sha256').update(buf).digest('hex');
-    const size = buf.length;
-    body += ` ${sha256} ${size} ${rel}\n`;
+    body += ` ${sha256} ${buf.length} ${rel}\n`;
   }
 
   body += 'SHA512:\n';
   for (const [name, buf] of files) {
     const rel = `${COMPONENT}/${BINARY_DIR}/${name}`;
     const sha512 = createHash('sha512').update(buf).digest('hex');
-    const size = buf.length;
-    body += ` ${sha512} ${size} ${rel}\n`;
+    body += ` ${sha512} ${buf.length} ${rel}\n`;
   }
 
   return body;
@@ -404,51 +457,36 @@ async function writeIndexForDir(absDir, displayPath, parentHref) {
   await writeFile(path.join(absDir, 'index.html'), html, 'utf8');
 }
 
-async function writeAllIndexes() {
+async function writeAllIndexes(pkgNames) {
+  const rel = (abs) =>
+    path.relative(OUT_ROOT, abs).split(path.sep).join('/');
   const dirs = [
-    {abs: OUT_ROOT, display: `${REPO_BASE_PATH}/`, parent: null},
-    {abs: path.join(OUT_ROOT, 'dists'), display: `${REPO_BASE_PATH}/dists/`, parent: '../'},
-    {abs: DIST_SUITE, display: `${REPO_BASE_PATH}/dists/${SUITE}/`, parent: '../'},
-    {
-      abs: path.join(DIST_SUITE, COMPONENT),
-      display: `${REPO_BASE_PATH}/dists/${SUITE}/${COMPONENT}/`,
-      parent: '../',
-    },
-    {
-      abs: DIST_BINARY,
-      display: `${REPO_BASE_PATH}/dists/${SUITE}/${COMPONENT}/${BINARY_DIR}/`,
-      parent: '../',
-    },
-    {abs: path.join(OUT_ROOT, 'pool'), display: `${REPO_BASE_PATH}/pool/`, parent: '../'},
-    {
-      abs: path.join(OUT_ROOT, 'pool', COMPONENT),
-      display: `${REPO_BASE_PATH}/pool/${COMPONENT}/`,
-      parent: '../',
-    },
-    {
-      abs: path.join(OUT_ROOT, 'pool', COMPONENT, POOL_LETTER),
-      display: `${REPO_BASE_PATH}/pool/${COMPONENT}/${POOL_LETTER}/`,
-      parent: '../',
-    },
-    {
-      abs: POOL_PKG_DIR,
-      display: `${REPO_BASE_PATH}/pool/${COMPONENT}/${POOL_LETTER}/${PKG_NAME}/`,
-      parent: '../',
-    },
+    {abs: OUT_ROOT, parent: null},
+    {abs: path.join(OUT_ROOT, 'dists'), parent: '../'},
+    {abs: DIST_SUITE, parent: '../'},
+    {abs: path.join(DIST_SUITE, COMPONENT), parent: '../'},
+    {abs: DIST_BINARY, parent: '../'},
+    {abs: POOL_ROOT, parent: '../'},
+    {abs: path.join(POOL_ROOT, COMPONENT), parent: '../'},
   ];
 
-  for (const {abs, display, parent} of dirs) {
+  // One index per pool letter and per package directory.
+  const letters = new Set(pkgNames.map((p) => poolLetter(p)));
+  for (const letter of letters) {
+    dirs.push({abs: path.join(POOL_ROOT, COMPONENT, letter), parent: '../'});
+  }
+  for (const pkg of pkgNames) {
+    dirs.push({abs: poolDirFor(pkg), parent: '../'});
+  }
+
+  for (const {abs, parent} of dirs) {
     await mkdir(abs, {recursive: true});
+    const relPath = rel(abs);
+    const display = relPath
+      ? `${REPO_BASE_PATH}/${relPath}/`
+      : `${REPO_BASE_PATH}/`;
     await writeIndexForDir(abs, display, parent);
   }
-}
-
-function parseDebVersion(filename) {
-  // Case-insensitive prefix so both `bastion-base_..._amd64.deb` and
-  // `Bastion-base_..._amd64.deb` are accepted.
-  const re = new RegExp(`^${PKG_FILE_PREFIX_LC}_(.+)_${ARCH}\\.deb$`, 'i');
-  const m = filename.match(re);
-  return m ? m[1] : '';
 }
 
 async function buildReleaseMeta(poolEntry) {
@@ -457,15 +495,13 @@ async function buildReleaseMeta(poolEntry) {
   const sha256 = info.deb.sha256 || (await sha256File(debPath));
   const version = parseDebVersion(path.basename(debPath));
   return {
+    packageName: info.packageName || packageNameFromFilename(path.basename(debPath)),
     filename: path.basename(debPath),
     version,
     sizeBytes: st.size,
     sizeHuman: `${(st.size / (1024 * 1024)).toFixed(1)} MB`,
     sha256,
-    poolRelativePath: path
-      .relative(OUT_ROOT, debPath)
-      .split(path.sep)
-      .join('/'),
+    poolRelativePath: path.relative(OUT_ROOT, debPath).split(path.sep).join('/'),
     publishedAt: info.publishedAt?.slice(0, 10) || '',
     tag: info.tag || '',
     releaseUrl: info.tag
@@ -475,11 +511,49 @@ async function buildReleaseMeta(poolEntry) {
   };
 }
 
+/** Build the per-package meta block from that package's release metas. */
+function buildPackageMeta(pkgName, metas) {
+  const sorted = [...metas].sort((a, b) => {
+    if (a.publishedAt && b.publishedAt && a.publishedAt !== b.publishedAt) {
+      return b.publishedAt.localeCompare(a.publishedAt);
+    }
+    return b.filename.localeCompare(a.filename);
+  });
+  // "latest" mirrors GitHub's /releases/latest preference for the newest.
+  const latest = sorted[0];
+  latest.isLatest = true;
+  const letter = poolLetter(pkgName);
+  const filePrefix = latest.filename.split('_')[0];
+  return {
+    packageName: pkgName,
+    label: pkgName,
+    filePrefix,
+    poolLetter: letter,
+    deb: {
+      filename: latest.filename,
+      version: latest.version,
+      sizeBytes: latest.sizeBytes,
+      sizeHuman: latest.sizeHuman,
+      sha256: latest.sha256,
+      poolRelativePath: latest.poolRelativePath,
+      publishedAt: latest.publishedAt,
+    },
+    github: {
+      repo: GITHUB_REPO,
+      tag: latest.tag,
+      releaseUrl: latest.releaseUrl,
+    },
+    urls: {
+      poolPackageDir: `${REPO_BASE_URL}/pool/${COMPONENT}/${letter}/${pkgName}/`,
+    },
+    releases: sorted,
+  };
+}
+
 async function main() {
   log(`Output: ${OUT_ROOT}`);
 
   let poolEntries;
-  let latestInfo;
 
   if (SKIP_DOWNLOAD && !LOCAL_DEB) {
     // Offline mode: rebuild metadata from whatever .deb files already exist
@@ -487,7 +561,6 @@ async function main() {
     log('DEBIAN_REPO_SKIP_DOWNLOAD=1: reusing existing pool .deb files');
     await mkdir(DIST_BINARY, {recursive: true});
     poolEntries = await reuseExistingPoolDebs();
-    latestInfo = poolEntries[0].info;
   } else {
     await rm(OUT_ROOT, {recursive: true, force: true});
     await mkdir(DIST_BINARY, {recursive: true});
@@ -501,9 +574,6 @@ async function main() {
       const debPath = await placeDebInPool(info);
       poolEntries.push({path: debPath, info});
     }
-
-    // "latest" mirrors GitHub's /releases/latest: newest non-prerelease.
-    latestInfo = releases.find((r) => !r.prerelease) || releases[0];
   }
 
   // IMPORTANT: write the clean Packages and Packages.gz BEFORE calling
@@ -518,64 +588,65 @@ async function main() {
   const releaseText = await generateRelease(DIST_SUITE, SUITE);
   await writeFile(path.join(DIST_SUITE, 'Release'), releaseText, 'utf8');
 
-  await writeAllIndexes();
-
-  const releaseMetas = [];
+  // Group release metas by package.
+  const allMetas = [];
   for (const entry of poolEntries) {
-    releaseMetas.push(await buildReleaseMeta(entry));
+    allMetas.push(await buildReleaseMeta(entry));
   }
-  // Newest first by publish date (fall back to filename for offline mode).
-  releaseMetas.sort((a, b) => {
-    if (a.publishedAt && b.publishedAt && a.publishedAt !== b.publishedAt) {
-      return b.publishedAt.localeCompare(a.publishedAt);
+  const byPackage = new Map();
+  for (const m of allMetas) {
+    if (!byPackage.has(m.packageName)) {
+      byPackage.set(m.packageName, []);
     }
-    return b.filename.localeCompare(a.filename);
+    byPackage.get(m.packageName).push(m);
+  }
+
+  const pkgNames = [...byPackage.keys()];
+  await writeAllIndexes(pkgNames);
+
+  const packages = pkgNames.map((pkg) =>
+    buildPackageMeta(pkg, byPackage.get(pkg)),
+  );
+  // Stable order: primary package first, then alphabetical.
+  packages.sort((a, b) => {
+    if (a.packageName === PRIMARY_PKG) return -1;
+    if (b.packageName === PRIMARY_PKG) return 1;
+    return a.packageName.localeCompare(b.packageName);
   });
 
-  const latestFilename = latestInfo?.deb?.name || releaseMetas[0].filename;
-  const latestMeta =
-    releaseMetas.find((m) => m.filename === latestFilename) || releaseMetas[0];
-  latestMeta.isLatest = true;
+  const primary =
+    packages.find((p) => p.packageName === PRIMARY_PKG) || packages[0];
 
   const aptSourceLine = `deb [trusted=yes] ${REPO_BASE_URL} ${SUITE} ${COMPONENT}`;
   const meta = {
     generatedAt: new Date().toISOString(),
     origin: ORIGIN,
-    label: LABEL,
+    label: primary.packageName,
     suite: SUITE,
     component: COMPONENT,
     architecture: ARCH,
-    packageName: PKG_NAME,
+    // Back-compat top-level fields mirror the PRIMARY package (bastion-base).
+    packageName: primary.packageName,
     repoBasePath: REPO_BASE_PATH,
     repoBaseUrl: REPO_BASE_URL,
     aptSourceLine,
-    deb: {
-      filename: latestMeta.filename,
-      version: latestMeta.version,
-      sizeBytes: latestMeta.sizeBytes,
-      sizeHuman: latestMeta.sizeHuman,
-      sha256: latestMeta.sha256,
-      poolRelativePath: latestMeta.poolRelativePath,
-      publishedAt: latestMeta.publishedAt,
-    },
-    releases: releaseMetas,
-    github: {
-      repo: GITHUB_REPO,
-      tag: latestMeta.tag,
-      releaseUrl: latestMeta.releaseUrl,
-    },
+    deb: primary.deb,
+    releases: primary.releases,
+    github: primary.github,
     urls: {
       suiteIndex: `${REPO_BASE_URL}/dists/${SUITE}/`,
       release: `${REPO_BASE_URL}/dists/${SUITE}/Release`,
       packages: `${REPO_BASE_URL}/dists/${SUITE}/${COMPONENT}/${BINARY_DIR}/Packages`,
-      poolPackageDir: `${REPO_BASE_URL}/pool/${COMPONENT}/${POOL_LETTER}/${PKG_NAME}/`,
+      poolPackageDir: primary.urls.poolPackageDir,
     },
+    // Full multi-package view (every Edgewatch Bastion package in the archive).
+    packages,
   };
 
   await writeFile(META_JSON, `${JSON.stringify(meta, null, 2)}\n`, 'utf8');
   log(`Wrote ${META_JSON}`);
   log(
-    `Indexed ${releaseMetas.length} release .deb(s); latest=${latestMeta.filename}`,
+    `Indexed ${allMetas.length} .deb(s) across ${pkgNames.length} package(s): ${pkgNames.join(', ')}`,
   );
   log(`APT source: ${aptSourceLine}`);
   log('Done.');

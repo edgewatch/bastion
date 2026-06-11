@@ -159,9 +159,13 @@ export default function Home(): React.ReactElement {
             </p>
             <pre className={styles.aptSource}>{APT_SOURCE_LINE}</pre>
             <p className={styles.aptHint}>
-              Add to <code>/etc/apt/sources.list.d/bastion-base.list</code>, then{' '}
+              Add to <code>/etc/apt/sources.list.d/bastion.list</code>, then{' '}
               <code>sudo apt update &amp;&amp; sudo apt install bastion-base</code>.
-              See <Link to="/docs/getting-started/install">installation docs</Link>.
+              The same source also serves{' '}
+              <code>bastion-telemetry</code> (the node agent;{' '}
+              <code>Depends: bastion-base</code>):{' '}
+              <code>sudo apt install bastion-telemetry</code>. See{' '}
+              <Link to="/docs/getting-started/install">installation docs</Link>.
             </p>
           </section>
 

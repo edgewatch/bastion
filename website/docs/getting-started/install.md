@@ -50,6 +50,34 @@ The package name was renamed from `edgewatch-bastion-base` to `bastion-base`. Th
 
 The archive is unsigned (`[trusted=yes]`). For production hosts, verify the SHA256 published on the [Downloads](/) page or GitHub Releases before trusting the mirror.
 
+## Install the telemetry / node agent
+
+The same APT source line also serves **`bastion-telemetry`** (the node agent: `ew-node-agent` + `ewctl`). It declares `Depends: bastion-base, ca-certificates`, so apt installs (or requires) the bastion-base data plane automatically and refuses to install without it.
+
+```bash
+sudo apt update
+sudo apt install bastion-telemetry
+```
+
+### Auto-enrollment on install
+
+On install, the agent tries to enroll automatically against the public API (`https://api.bastion.edgewatch.net`). Provide the one-time enrollment token in any of these ways (checked in this order):
+
+1. `EW_ENROLL_TOKEN` environment variable — `sudo EW_ENROLL_TOKEN=enk-XXXX apt install bastion-telemetry`.
+2. The interactive debconf prompt shown during install.
+3. A token file at `/etc/edgewatch/enroll.token` (first line; removed after a successful enroll).
+
+Override the endpoint with the `bastion-telemetry/endpoint_url` debconf value or `EW_ENROLL_ENDPOINT`.
+
+On success the node is enrolled and `bastion-telemetry.service` is enabled and started. If enrollment cannot complete (no token, network error, or server rejection) the install still succeeds, the agent stays idle (not started), and a message explains how to finish enrollment manually:
+
+```bash
+ewctl endpoint enroll --endpoint https://api.bastion.edgewatch.net --token <TOKEN>
+sudo systemctl enable --now bastion-telemetry
+```
+
+You can re-run enrollment after providing a token with `sudo dpkg-reconfigure bastion-telemetry`.
+
 ## Install a local package
 
 Install with `apt`, not plain `dpkg`, so dependencies are resolved automatically:
