@@ -7,7 +7,8 @@
 #
 # The build's prebuild step (website/scripts/generate-debian-repo.mjs) reads the
 # GitHub Releases API live, so the static apt archive and the download page
-# always reflect every published release.
+# always reflect every published release (capped by DEBIAN_REPO_KEEP_VERSIONS so
+# the published site stays under GitHub Pages' ~1 GiB soft limit).
 name: Deploy GitHub Pages
 
 on:
@@ -20,11 +21,12 @@ on:
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
-# Serialize deploys and drop superseded runs (a tag both publishes a release
-# and pushes the mirror to main, which can trigger two runs).
+# Serialize deploys. Do NOT cancel in-progress runs: a tag can fire several
+# release events plus a mirror push to main; cancelling mid-deploy left
+# Packages/meta updated while newer pool .deb blobs were missing from Pages.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -52,13 +54,51 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build site (prebuild regenerates apt repo from all releases)
+      - name: Build site (prebuild regenerates apt repo from releases)
         env:
           DOCS_URL: https://download.edgewatch.com
           BASE_URL: /
           DOWNLOAD_GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Keep the published pool under GitHub Pages' ~1 GiB soft limit.
+          DEBIAN_REPO_KEEP_VERSIONS: '8'
         run: npm run build
+
+      - name: Verify apt pool binaries are in the build output
+        run: |
+          set -euo pipefail
+          POOL="build/debian/bastion/pool"
+          test -d "${POOL}"
+          mapfile -t debs < <(find "${POOL}" -type f -name '*.deb' | sort)
+          count="${#debs[@]}"
+          echo "Found ${count} .deb file(s) under ${POOL}"
+          if [ "${count}" -lt 1 ]; then
+            echo "ERROR: build output has no pool .deb files; refusing to deploy" >&2
+            exit 1
+          fi
+          # Fail loudly if Packages references a Filename that was not copied.
+          pkgs="build/debian/bastion/dists/trixie/main/binary-amd64/Packages"
+          test -f "${pkgs}"
+          missing=0
+          while IFS= read -r rel; do
+            [ -n "${rel}" ] || continue
+            if [ ! -f "build/debian/bastion/${rel}" ]; then
+              echo "MISSING pool file listed in Packages: ${rel}" >&2
+              missing=$((missing + 1))
+            fi
+          done < <(awk '/^Filename:/{print $2}' "${pkgs}")
+          if [ "${missing}" -ne 0 ]; then
+            echo "ERROR: ${missing} Packages Filename(s) missing from build/" >&2
+            exit 1
+          fi
+          du -sh "${POOL}" build/debian/bastion || true
+          # Soft guard: published site must stay under ~1 GiB or Pages 404s.
+          bytes="$(du -sb build | awk '{print $1}')"
+          echo "Total build size: ${bytes} bytes"
+          if [ "${bytes}" -gt $((950 * 1024 * 1024)) ]; then
+            echo "ERROR: build/ is over 950 MiB; GitHub Pages will drop files" >&2
+            exit 1
+          fi
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
@@ -66,6 +106,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./website/build
           publish_branch: gh-pages
+          # Orphan commit keeps the branch tip lean after pool pruning; CNAME
+          # is included via website/static/CNAME → build/CNAME.
+          force_orphan: true
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           full_commit_message: 'Deploy site for ${{ github.event.release.tag_name || github.sha }}'

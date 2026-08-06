@@ -2,4 +2,7 @@ node_modules/
 .docusaurus/
 build/
 .env
+# Local/CI prebuild writes pool .debs here; they must not land on main.
+# Docusaurus still copies them from disk into build/ during `npm run build`
+# (gitignore does not affect the static copy). GitHub Actions publishes build/.
 static/debian/bastion/pool/**/*.deb

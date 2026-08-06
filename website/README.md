@@ -37,7 +37,11 @@ deb [trusted=yes] https://download.edgewatch.com/debian/bastion trixie main
 | `DEBIAN_REPO_SKIP_DOWNLOAD` | Set to `1` to reuse an existing pool `.deb` (no GitHub download) |
 | `DEBIAN_REPO_DEB_PATH` | Use a local `.deb` instead of downloading |
 | `DEBIAN_REPO_SUITE` | Suite/codename (default: `trixie`) |
+| `DEBIAN_REPO_KEEP_VERSIONS` | Max `.deb`s kept per package (default `8`). `0`/`all` keeps every release. Needed because GitHub Pages soft-caps published sites near **1 GiB** and starts 404'ing newer pool files beyond that. |
+| `DEBIAN_REPO_POOL_SOFT_LIMIT_BYTES` | Fail the build if the pool exceeds this size (default ~900 MiB) |
 | `DOCS_URL` | Site origin for URLs in `Release` and meta (default: `https://download.edgewatch.com`) |
+
+Release assets are accepted with content-types `application/vnd.debian.binary-package`, `application/x-debian-package`, or `application/octet-stream` (manual `gh` uploads often use the latter two).
 
 Regenerate only the archive:
 
@@ -86,8 +90,11 @@ and the static Debian archive always reflect the releases on
    `.github/workflows/deploy-pages.yml`) to `edgewatch/bastion` `main`.
 3. The GitHub Actions workflow runs on `release` events (and on `main` pushes that
    touch `website/**`). Its `prebuild` step (`scripts/generate-debian-repo.mjs`)
-   reads the GitHub Releases API live, rebuilds the apt repo from **all** published
-   releases, builds the site, and deploys `website/build` to the `gh-pages` branch.
+   reads the GitHub Releases API live, rebuilds the apt repo from the newest
+   published releases (default: 8 versions per package — GitHub Pages soft-caps
+   sites near 1 GiB), builds the site, and deploys `website/build` to `gh-pages`.
+   Concurrent deploys are queued (`cancel-in-progress: false`) so a full publish
+   is not cancelled mid-way by a follow-up release event.
 
 Because the build queries the Releases API at run time, Pages reconverges to match
 GitHub even for releases created directly on GitHub, and removed releases drop out

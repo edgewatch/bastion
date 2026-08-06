@@ -59,6 +59,25 @@ const REPO_BASE_PATH = `/debian/${REPO_SLUG}`;
 const REPO_BASE_URL = `${SITE_URL.replace(/\/$/, '')}${REPO_BASE_PATH}`;
 const SKIP_DOWNLOAD = process.env.DEBIAN_REPO_SKIP_DOWNLOAD === '1';
 const LOCAL_DEB = process.env.DEBIAN_REPO_DEB_PATH?.trim() || '';
+// Cap pool size so the published gh-pages tree stays under GitHub Pages' ~1 GiB
+// soft limit. Beyond that, git still holds the blobs but Pages starts 404'ing
+// newer pool objects while Packages/meta may still list them.
+const KEEP_VERSIONS = (() => {
+  const raw = process.env.DEBIAN_REPO_KEEP_VERSIONS?.trim();
+  if (raw === '0' || raw === 'all') return 0; // 0 = keep every version
+  const n = Number(raw || '8');
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 8;
+})();
+const POOL_SOFT_LIMIT_BYTES = Number(
+  process.env.DEBIAN_REPO_POOL_SOFT_LIMIT_BYTES || String(900 * 1024 * 1024),
+);
+
+/** Content-types GitHub assigns to .deb release assets (CI vs manual `gh`). */
+const DEB_CONTENT_TYPES = new Set([
+  'application/vnd.debian.binary-package',
+  'application/x-debian-package',
+  'application/octet-stream',
+]);
 
 const OUT_ROOT = path.join(WEBSITE_ROOT, 'static', 'debian', REPO_SLUG);
 const POOL_ROOT = path.join(OUT_ROOT, 'pool');
@@ -91,6 +110,14 @@ async function sha256File(filePath) {
 
 function isPkgDebAsset(name) {
   return ASSET_RE.test(name);
+}
+
+function isDebContentType(contentType) {
+  if (!contentType || typeof contentType !== 'string') {
+    // Missing type: still accept when the filename matches ASSET_RE.
+    return true;
+  }
+  return DEB_CONTENT_TYPES.has(contentType.trim().toLowerCase());
 }
 
 /** Lowercase Debian package name derived from a Bastion-*_*.deb filename. */
@@ -135,10 +162,19 @@ function ghHeaders() {
  */
 function entriesFromRelease(rel) {
   const debAssets = (rel.assets || []).filter(
-    (a) =>
-      isPkgDebAsset(a.name) &&
-      a.content_type === 'application/vnd.debian.binary-package',
+    (a) => isPkgDebAsset(a.name) && isDebContentType(a.content_type),
   );
+  // Prefer the official Debian media type when the same filename appears twice
+  // (should not happen) or when ranking ties later.
+  debAssets.sort((a, b) => {
+    const rank = (ct) =>
+      ct === 'application/vnd.debian.binary-package'
+        ? 0
+        : ct === 'application/x-debian-package'
+          ? 1
+          : 2;
+    return rank(a.content_type) - rank(b.content_type);
+  });
   return debAssets.map((debAsset) => {
     const shaMatch = rel.body?.match(
       new RegExp(
@@ -199,7 +235,43 @@ async function fetchAllReleases() {
       `No releases expose a Bastion-*_${ARCH}.deb asset in ${GITHUB_REPO}`,
     );
   }
-  return collected;
+  return limitVersionsPerPackage(collected, KEEP_VERSIONS);
+}
+
+/**
+ * Keep at most `keep` newest .deb entries per package name so the static
+ * archive fits under GitHub Pages' soft size limit. `keep <= 0` means all.
+ */
+function limitVersionsPerPackage(entries, keep) {
+  if (!keep || keep <= 0) {
+    return entries;
+  }
+  const byPkg = new Map();
+  for (const entry of entries) {
+    if (!byPkg.has(entry.packageName)) {
+      byPkg.set(entry.packageName, []);
+    }
+    byPkg.get(entry.packageName).push(entry);
+  }
+  const limited = [];
+  for (const [pkg, list] of byPkg) {
+    list.sort((a, b) => {
+      if (a.publishedAt && b.publishedAt && a.publishedAt !== b.publishedAt) {
+        return b.publishedAt.localeCompare(a.publishedAt);
+      }
+      // Newer embedded timestamps / git suffixes sort later lexicographically
+      // for our Bastion-*_<ver>_amd64.deb naming; reverse for newest-first.
+      return b.deb.name.localeCompare(a.deb.name);
+    });
+    const kept = list.slice(0, keep);
+    if (list.length > kept.length) {
+      log(
+        `Keeping ${kept.length}/${list.length} newest ${pkg} .deb(s) (DEBIAN_REPO_KEEP_VERSIONS=${keep})`,
+      );
+    }
+    limited.push(...kept);
+  }
+  return limited;
 }
 
 function releaseInfoFromLocal(filePath) {
@@ -648,6 +720,21 @@ async function main() {
   log(
     `Indexed ${allMetas.length} .deb(s) across ${pkgNames.length} package(s): ${pkgNames.join(', ')}`,
   );
+
+  let poolBytes = 0;
+  for (const entry of poolEntries) {
+    poolBytes += (await stat(entry.path)).size;
+  }
+  const poolMiB = (poolBytes / (1024 * 1024)).toFixed(1);
+  log(`Pool size: ${poolMiB} MiB (${poolEntries.length} file(s))`);
+  if (POOL_SOFT_LIMIT_BYTES > 0 && poolBytes > POOL_SOFT_LIMIT_BYTES) {
+    throw new Error(
+      `Pool is ${poolMiB} MiB, above soft limit ${(POOL_SOFT_LIMIT_BYTES / (1024 * 1024)).toFixed(0)} MiB. ` +
+        `GitHub Pages will 404 newer .deb files once the published site exceeds ~1 GiB. ` +
+        `Lower DEBIAN_REPO_KEEP_VERSIONS (currently ${KEEP_VERSIONS || 'all'}) or raise DEBIAN_REPO_POOL_SOFT_LIMIT_BYTES.`,
+    );
+  }
+
   log(`APT source: ${aptSourceLine}`);
   log('Done.');
 }

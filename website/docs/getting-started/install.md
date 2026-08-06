@@ -100,6 +100,41 @@ curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1/
 
 The `postinst` script creates runtime directories, generates a default self-signed certificate and `dhparam.pem` when missing, runs `ldconfig`, enables `openresty.service`, validates the nginx/OpenResty configuration, and starts or reloads the service only when validation succeeds.
 
+## Post-install customization
+
+On first install, `postinst` creates `/etc/nginx/conf.d/occentus.conf` as an
+admin-owned include. Put your own `http{}`-level directives, snippets, or
+`include` statements there instead of editing `/etc/nginx/nginx.conf` directly.
+That file is **not** a dpkg conffile: the package creates it once and never
+modifies or overwrites it on future upgrades.
+
+## Upgrade
+
+Use the explicit conffile policy for non-interactive upgrades (validated on
+staging; see `docs/staging-v1.0.8-gap-analysis.md` in the repository):
+
+```bash
+sudo apt update
+sudo apt-get install -y \
+  -o Dpkg::Options::=--force-confdef \
+  -o Dpkg::Options::=--force-confold \
+  --only-upgrade bastion-base bastion-telemetry
+```
+
+With `--force-confdef --force-confold`:
+
+- **Modified conffiles** (for example a hand-edited `/etc/nginx/nginx.conf`) are
+  always kept; the package's new default is written alongside as
+  `<file>.dpkg-dist` for manual review or merge.
+- **Unmodified conffiles** are updated automatically to the package version.
+- **Seed-once files** created by `postinst` but not listed as conffiles — for
+  example `/etc/nginx/conf.d/occentus.conf` — are never touched by dpkg during
+  an upgrade.
+
+The `postinst` script validates the configuration with `openresty -t` before
+reloading. If validation fails, it does **not** reload and leaves the previous
+process intact. Review `/etc/nginx/` and retry with `apt install --reinstall`.
+
 ## Remove or purge
 
 ```bash
