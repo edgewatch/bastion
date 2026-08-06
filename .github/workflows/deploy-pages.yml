@@ -5,10 +5,10 @@
 # mirrored to .github/workflows/deploy-pages.yml on the public GitHub repo by
 # the `mirror:website-github` job in .gitlab-ci.yml. Edit it in GitLab, not here.
 #
-# Deploy uses actions/deploy-pages (build_type=workflow), NOT the legacy
-# gh-pages branch builder. The legacy builder started returning
-# "Page build failed" once the published tree exceeded GitHub Pages' ~1 GiB
-# soft limit, leaving Packages/meta updated in git while pool URLs 404'd.
+# Publishes via peaceiris → gh-pages (legacy Pages source). The pool is capped
+# with DEBIAN_REPO_KEEP_VERSIONS so the tip stays under GitHub Pages' ~1 GiB
+# soft limit — exceeding it made the legacy builder return "Page build failed"
+# while git still held Packages/meta pointing at missing pool URLs.
 name: Deploy GitHub Pages
 
 on:
@@ -29,12 +29,11 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
   pages: write
-  id-token: write
 
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -43,7 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure Pages uses GitHub Actions (workflow)
+      - name: Ensure Pages uses legacy gh-pages branch publishing
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         working-directory: .
@@ -51,15 +50,15 @@ jobs:
           set -euo pipefail
           REPO="${{ github.repository }}"
           BT="$(gh api "repos/${REPO}/pages" --jq .build_type)"
-          if [ "${BT}" != "workflow" ]; then
-            echo "Pages: switching build_type legacy → workflow"
-            gh api -X PUT "repos/${REPO}/pages" -f build_type=workflow
+          if [ "${BT}" != "legacy" ]; then
+            echo "Pages: switching build_type ${BT} → legacy (source=gh-pages)"
+            gh api -X PUT "repos/${REPO}/pages" \
+              -f build_type=legacy \
+              -f source[branch]=gh-pages \
+              -f source[path]=/
           else
-            echo "Pages: already build_type=workflow"
+            echo "Pages: already build_type=legacy"
           fi
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -80,9 +79,7 @@ jobs:
           BASE_URL: /
           DOWNLOAD_GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Keep the published pool well under GitHub Pages size/time limits.
-          # ~40MB per bastion-base × 5 ≈ 200MB artifact (deploy-pages default
-          # status poll is 10 minutes; larger pools queued until timeout).
+          # ~40MB × 5 bastion-base ≈ 200MB tip — safely under Pages' ~1 GiB soft limit.
           DEBIAN_REPO_KEEP_VERSIONS: '5'
         run: npm run build
 
@@ -115,27 +112,19 @@ jobs:
           du -sh "${POOL}" build/debian/bastion || true
           bytes="$(du -sb build | awk '{print $1}')"
           echo "Total build size: ${bytes} bytes"
-          if [ "${bytes}" -gt $((950 * 1024 * 1024)) ]; then
-            echo "ERROR: build/ is over 950 MiB; refusing to deploy oversized artifact" >&2
+          if [ "${bytes}" -gt $((900 * 1024 * 1024)) ]; then
+            echo "ERROR: build/ is over 900 MiB; GitHub Pages will fail or 404 files" >&2
             exit 1
           fi
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: ./website/build
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        with:
-          # Milliseconds. Large apt pools can sit in deployment_queued past 10m.
-          timeout: '2400000'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./website/build
+          publish_branch: gh-pages
+          # Orphan tip keeps history from re-accumulating old pool blobs.
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          full_commit_message: 'Deploy site for ${{ github.event.release.tag_name || github.sha }}'

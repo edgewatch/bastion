@@ -65,8 +65,8 @@ const LOCAL_DEB = process.env.DEBIAN_REPO_DEB_PATH?.trim() || '';
 const KEEP_VERSIONS = (() => {
   const raw = process.env.DEBIAN_REPO_KEEP_VERSIONS?.trim();
   if (raw === '0' || raw === 'all') return 0; // 0 = keep every version
-  const n = Number(raw || '8');
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 8;
+  const n = Number(raw || '5');
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 5;
 })();
 const POOL_SOFT_LIMIT_BYTES = Number(
   process.env.DEBIAN_REPO_POOL_SOFT_LIMIT_BYTES || String(900 * 1024 * 1024),
