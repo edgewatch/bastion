@@ -80,8 +80,10 @@ jobs:
           BASE_URL: /
           DOWNLOAD_GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Keep the published pool under GitHub Pages' ~1 GiB soft limit.
-          DEBIAN_REPO_KEEP_VERSIONS: '8'
+          # Keep the published pool well under GitHub Pages size/time limits.
+          # ~40MB per bastion-base × 5 ≈ 200MB artifact (deploy-pages default
+          # status poll is 10 minutes; larger pools queued until timeout).
+          DEBIAN_REPO_KEEP_VERSIONS: '5'
         run: npm run build
 
       - name: Verify apt pool binaries are in the build output
@@ -126,6 +128,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -133,3 +136,6 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Milliseconds. Large apt pools can sit in deployment_queued past 10m.
+          timeout: '2400000'
