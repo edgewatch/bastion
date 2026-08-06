@@ -158,24 +158,34 @@ function ghHeaders() {
 
 /**
  * Return one entry per matching .deb asset in a release (a single release may
- * carry both bastion-base and bastion-telemetry assets).
+ * carry both bastion-base and bastion-telemetry assets). When the same package
+ * appears more than once in a release (manual re-upload + CI), prefer the
+ * official Debian media type and then the newest filename.
  */
 function entriesFromRelease(rel) {
   const debAssets = (rel.assets || []).filter(
     (a) => isPkgDebAsset(a.name) && isDebContentType(a.content_type),
   );
-  // Prefer the official Debian media type when the same filename appears twice
-  // (should not happen) or when ranking ties later.
-  debAssets.sort((a, b) => {
-    const rank = (ct) =>
-      ct === 'application/vnd.debian.binary-package'
-        ? 0
-        : ct === 'application/x-debian-package'
-          ? 1
-          : 2;
-    return rank(a.content_type) - rank(b.content_type);
-  });
-  return debAssets.map((debAsset) => {
+  const rank = (ct) =>
+    ct === 'application/vnd.debian.binary-package'
+      ? 0
+      : ct === 'application/x-debian-package'
+        ? 1
+        : 2;
+  const bestByPkg = new Map();
+  for (const debAsset of debAssets) {
+    const pkg = packageNameFromFilename(debAsset.name);
+    const prev = bestByPkg.get(pkg);
+    if (
+      !prev ||
+      rank(debAsset.content_type) < rank(prev.content_type) ||
+      (rank(debAsset.content_type) === rank(prev.content_type) &&
+        debAsset.name.localeCompare(prev.name) > 0)
+    ) {
+      bestByPkg.set(pkg, debAsset);
+    }
+  }
+  return [...bestByPkg.values()].map((debAsset) => {
     const shaMatch = rel.body?.match(
       new RegExp(
         `${debAsset.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\n]*SHA256:\\s*([a-f0-9]{64})`,

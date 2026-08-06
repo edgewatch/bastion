@@ -5,10 +5,10 @@
 # mirrored to .github/workflows/deploy-pages.yml on the public GitHub repo by
 # the `mirror:website-github` job in .gitlab-ci.yml. Edit it in GitLab, not here.
 #
-# The build's prebuild step (website/scripts/generate-debian-repo.mjs) reads the
-# GitHub Releases API live, so the static apt archive and the download page
-# always reflect every published release (capped by DEBIAN_REPO_KEEP_VERSIONS so
-# the published site stays under GitHub Pages' ~1 GiB soft limit).
+# Deploy uses actions/deploy-pages (build_type=workflow), NOT the legacy
+# gh-pages branch builder. The legacy builder started returning
+# "Page build failed" once the published tree exceeded GitHub Pages' ~1 GiB
+# soft limit, leaving Packages/meta updated in git while pool URLs 404'd.
 name: Deploy GitHub Pages
 
 on:
@@ -22,17 +22,19 @@ on:
   workflow_dispatch:
 
 # Serialize deploys. Do NOT cancel in-progress runs: a tag can fire several
-# release events plus a mirror push to main; cancelling mid-deploy left
-# Packages/meta updated while newer pool .deb blobs were missing from Pages.
+# release events plus a mirror push to main; cancelling mid-deploy left the
+# site inconsistent.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,6 +42,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Ensure Pages uses GitHub Actions (workflow)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: .
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          BT="$(gh api "repos/${REPO}/pages" --jq .build_type)"
+          if [ "${BT}" != "workflow" ]; then
+            echo "Pages: switching build_type legacy → workflow"
+            gh api -X PUT "repos/${REPO}/pages" -f build_type=workflow
+          else
+            echo "Pages: already build_type=workflow"
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -76,7 +96,6 @@ jobs:
             echo "ERROR: build output has no pool .deb files; refusing to deploy" >&2
             exit 1
           fi
-          # Fail loudly if Packages references a Filename that was not copied.
           pkgs="build/debian/bastion/dists/trixie/main/binary-amd64/Packages"
           test -f "${pkgs}"
           missing=0
@@ -92,23 +111,25 @@ jobs:
             exit 1
           fi
           du -sh "${POOL}" build/debian/bastion || true
-          # Soft guard: published site must stay under ~1 GiB or Pages 404s.
           bytes="$(du -sb build | awk '{print $1}')"
           echo "Total build size: ${bytes} bytes"
           if [ "${bytes}" -gt $((950 * 1024 * 1024)) ]; then
-            echo "ERROR: build/ is over 950 MiB; GitHub Pages will drop files" >&2
+            echo "ERROR: build/ is over 950 MiB; refusing to deploy oversized artifact" >&2
             exit 1
           fi
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./website/build
-          publish_branch: gh-pages
-          # Orphan commit keeps the branch tip lean after pool pruning; CNAME
-          # is included via website/static/CNAME → build/CNAME.
-          force_orphan: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          full_commit_message: 'Deploy site for ${{ github.event.release.tag_name || github.sha }}'
+          path: ./website/build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

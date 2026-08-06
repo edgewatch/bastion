@@ -92,9 +92,10 @@ and the static Debian archive always reflect the releases on
    touch `website/**`). Its `prebuild` step (`scripts/generate-debian-repo.mjs`)
    reads the GitHub Releases API live, rebuilds the apt repo from the newest
    published releases (default: 8 versions per package — GitHub Pages soft-caps
-   sites near 1 GiB), builds the site, and deploys `website/build` to `gh-pages`.
-   Concurrent deploys are queued (`cancel-in-progress: false`) so a full publish
-   is not cancelled mid-way by a follow-up release event.
+   sites near 1 GiB), builds the site, and deploys via `actions/deploy-pages`
+   (`build_type=workflow`). Concurrent deploys are queued
+   (`cancel-in-progress: false`) so a full publish is not cancelled mid-way by a
+   follow-up release event.
 
 Because the build queries the Releases API at run time, Pages reconverges to match
 GitHub even for releases created directly on GitHub, and removed releases drop out
