@@ -166,7 +166,7 @@ const currentDeb: DownloadArtifact = {
 // env-overridable card above; secondary packages are rendered generically.
 const PACKAGE_DESCRIPTIONS: Record<string, string> = {
   'bastion-telemetry':
-    'Node/telemetry agent (ew-node-agent + ewctl) for Debian 13 (Trixie), amd64. Maintains the outbound mTLS connection to the Edgewatch endpoint: enrollment, signed config pull, heartbeats, command execution and telemetry. Requires bastion-base (apt resolves it automatically: it is declared as Depends: bastion-base, ca-certificates). Install with "sudo apt install bastion-telemetry".',
+    'Node/telemetry agent (ew-node-agent + ewctl) for Debian 13 (Trixie), amd64. Maintains the outbound mTLS connection to the Edgewatch endpoint: enrollment, signed config pull, heartbeats, command execution and telemetry. Requires bastion-base plus runtime tools (apt resolves them automatically: Depends: bastion-base, ca-certificates, debconf, csync2, certbot, fail2ban). Install with "sudo apt install bastion-telemetry".',
 };
 
 function packageReleaseArtifacts(pkg: DebianRepoPackage): DownloadArtifact[] {

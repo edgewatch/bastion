@@ -52,7 +52,7 @@ The archive is unsigned (`[trusted=yes]`). For production hosts, verify the SHA2
 
 ## Install the telemetry / node agent
 
-The same APT source line also serves **`bastion-telemetry`** (the node agent: `ew-node-agent` + `ewctl`). It declares `Depends: bastion-base, ca-certificates`, so apt installs (or requires) the bastion-base data plane automatically and refuses to install without it.
+The same APT source line also serves **`bastion-telemetry`** (the node agent: `ew-node-agent` + `ewctl`). It declares `Depends: bastion-base, ca-certificates, debconf, csync2, certbot, fail2ban`, so apt installs (or requires) the bastion-base data plane and those runtime tools automatically and refuses to install without them. Fail2ban ships with a curated jail catalog (SSH + nginx jails on by default; optional jails toggled from the console).
 
 ```bash
 sudo apt update

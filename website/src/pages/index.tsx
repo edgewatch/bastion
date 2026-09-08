@@ -163,7 +163,7 @@ export default function Home(): React.ReactElement {
               <code>sudo apt update &amp;&amp; sudo apt install bastion-base</code>.
               The same source also serves{' '}
               <code>bastion-telemetry</code> (the node agent;{' '}
-              <code>Depends: bastion-base</code>):{' '}
+              <code>Depends: bastion-base, ca-certificates, debconf, csync2, certbot, fail2ban</code>):{' '}
               <code>sudo apt install bastion-telemetry</code>. See{' '}
               <Link to="/docs/getting-started/install">installation docs</Link>.
             </p>
