@@ -78,6 +78,13 @@ sudo systemctl enable --now bastion-telemetry
 
 You can re-run enrollment after providing a token with `sudo dpkg-reconfigure bastion-telemetry`.
 
+### Related: vhostctl
+
+After the node agent is enrolled, nginx/OpenResty site apply can go through
+**vhostctl** (feature-flagged planning, drift gates, and optional post-apply
+probe). See [Architecture](../vhostctl/architecture), [Rollout](../vhostctl/rollout),
+and [Runbook](../vhostctl/runbook).
+
 ## Install a local package
 
 Install with `apt`, not plain `dpkg`, so dependencies are resolved automatically:
