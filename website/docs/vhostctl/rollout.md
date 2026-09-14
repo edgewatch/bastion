@@ -110,7 +110,10 @@ When `post_apply_probe_enabled` is true and a command is set:
 
 1. Apply activates pending → active (previous tree stashed as `active.old`).
 2. Reload succeeds.
-3. Probe runs (**before** commit).
+3. Probe runs (**before** commit), retried with exponential backoff for up to
+   ~30s so a listener that is slow to accept right after reload (e.g.
+   ModSecurity-heavy configs) does not cause a spurious rollback. The probe
+   command needs no retry flags of its own (plain `curl -fsS --max-time 5`).
 4. On probe failure: restore previous active + reload; ack `phase: probe`.
 5. On success: commit (delete `.old`).
 

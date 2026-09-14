@@ -79,6 +79,12 @@ vhostctl:
   post_apply_probe_command: ["curl", "-fsS", "--max-time", "5", "http://127.0.0.1:18101/edgewatch_status"]
 ```
 
+The agent retries the probe with exponential backoff for up to ~30s before
+declaring failure: right after `nginx -s reload` a ModSecurity-heavy config can
+take a moment before the listener accepts, and probing once immediately used to
+cause spurious rollbacks. Keep the probe command simple — no `curl --retry`
+flags are needed (the ack reports `post_apply_probe_attempts` when retried).
+
 On failure the agent restores `active.old`, reloads, and acks `phase: probe`.
 Empty command with probe enabled skips the probe (`post_apply_probe_skipped`).
 
