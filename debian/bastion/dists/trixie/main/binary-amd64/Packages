@@ -1,0 +1,345 @@
+Package: bastion-base
+Source: bastion-base
+Version: 1.31.1.1-20260918090001+gitcca308b0~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 51144
+Pre-Depends: dpkg (>= 1.16.1), adduser
+Depends: libbrotli1 (>= 0.6.0), libc6 (>= 2.38), libcrypt1 (>= 1:4.1.0), libcurl4t64 (>= 7.16.2), libfuzzy2 (>= 2.13), libgcc-s1 (>= 3.3), libgd3 (>= 2.1.0~alpha~), libgeoip1t64 (>= 1.6.12), liblmdb0 (>= 0.9.7), liblua5.4-0 (>= 5.4.6), libmaxminddb0 (>= 1.0.2), libpcre2-8-0 (>= 10.22), libssl3t64 (>= 3.5.0), libstdc++6 (>= 14), libxml2 (>= 2.8.0), libxslt1.1 (>= 1.1.25), libyajl2 (>= 2.0.4), zlib1g (>= 1:1.1.4), libc6, libssl3, libpcre2-8-0, libpcre2-posix3, zlib1g, libxslt1.1, libgd3, libgeoip1t64 | libgeoip1, libxml2, libcurl4t64 | libcurl4, libyajl2, liblmdb0, liblua5.4-0, libfuzzy2, libmaxminddb0, systemd | systemd-sysv, ca-certificates, openssl, python3:any
+Recommends: logrotate
+Suggests: geoipupdate
+Conflicts: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Replaces: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Provides: httpd, httpd-cgi, nginx, edgewatch-bastion-base
+Filename: pool/main/b/bastion-base/Bastion-base_1.31.1.1-20260918090001+gitcca308b0.deb13_amd64.deb
+Size: 9562940
+MD5sum: d16ce2842cd449e1791eeafa2aa83f52
+SHA1: 94f4772c6dda6c03ffb7e4890da098ed24def5cb
+SHA256: 7fcec1e578eb3eb339f161a9e887f113170f0bc3257bdc85f00e0c7764c5f803
+Section: web
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: OpenResty + ModSecurity + AJP + GeoIP2 + headers-more (Edgewatch bastion base)
+ basic OpenResty load balancer stack for Bastion
+ This package provides the base load balancer stack for Edgewatch Bastion.
+ It installs the core OpenResty runtime together with ModSecurity, AJP upstream
+ support, GeoIP2 integration, and HTTP header manipulation capabilities.
+ .
+ The stack is intended to act as the minimal HTTP and HTTPS reverse proxy layer
+ for Bastion deployments, providing traffic routing, WAF inspection, GeoIP-based
+ request metadata, and flexible header processing.
+ .
+ This package contains only the basic load balancer components. It does not
+ provide the Bastion API, clustering, firewall management, telemetry, Wazuh,
+ Redis, certificate automation, or frontend services.
+ .
+    OpenResty 1.29.2.4
+    ModSecurity v3 (v3.0.15) + ModSecurity-nginx (v1.0.4)
+    headers-more-nginx-module (bundled-with-openresty-1.29.2.4)
+    ngx_http_geoip2_module (3.4)
+    nginx_ajp_module (master)
+    ngx_brotli (master)
+    OWASP Core Rule Set (v4.26.0)
+    vhost templates, error templates, proxy profiles, ssl.conf
+    systemd unit, tmpfiles.d y logrotate
+
+Package: bastion-base
+Source: bastion-base
+Version: 1.31.1.1-20260925074322+gitb26029ce~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 51144
+Pre-Depends: dpkg (>= 1.16.1), adduser
+Depends: libbrotli1 (>= 0.6.0), libc6 (>= 2.38), libcrypt1 (>= 1:4.1.0), libcurl4t64 (>= 7.16.2), libfuzzy2 (>= 2.13), libgcc-s1 (>= 3.3), libgd3 (>= 2.1.0~alpha~), libgeoip1t64 (>= 1.6.12), liblmdb0 (>= 0.9.7), liblua5.4-0 (>= 5.4.6), libmaxminddb0 (>= 1.0.2), libpcre2-8-0 (>= 10.22), libssl3t64 (>= 3.5.0), libstdc++6 (>= 14), libxml2 (>= 2.8.0), libxslt1.1 (>= 1.1.25), libyajl2 (>= 2.0.4), zlib1g (>= 1:1.1.4), libc6, libssl3, libpcre2-8-0, libpcre2-posix3, zlib1g, libxslt1.1, libgd3, libgeoip1t64 | libgeoip1, libxml2, libcurl4t64 | libcurl4, libyajl2, liblmdb0, liblua5.4-0, libfuzzy2, libmaxminddb0, systemd | systemd-sysv, ca-certificates, openssl, python3:any
+Recommends: logrotate
+Suggests: geoipupdate
+Conflicts: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Replaces: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Provides: httpd, httpd-cgi, nginx, edgewatch-bastion-base
+Filename: pool/main/b/bastion-base/Bastion-base_1.31.1.1-20260925074322+gitb26029ce.deb13_amd64.deb
+Size: 9559188
+MD5sum: ebc98d75e61c4d5fa0465fc1892287c8
+SHA1: 84cfa1266b9ab9a8f082f9671a72ce87caf54e47
+SHA256: 5142cb6da5d2aac657589623ad474d55212c2eca291032daf62bf155bc9e9866
+Section: web
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: OpenResty + ModSecurity + AJP + GeoIP2 + headers-more (Edgewatch bastion base)
+ basic OpenResty load balancer stack for Bastion
+ This package provides the base load balancer stack for Edgewatch Bastion.
+ It installs the core OpenResty runtime together with ModSecurity, AJP upstream
+ support, GeoIP2 integration, and HTTP header manipulation capabilities.
+ .
+ The stack is intended to act as the minimal HTTP and HTTPS reverse proxy layer
+ for Bastion deployments, providing traffic routing, WAF inspection, GeoIP-based
+ request metadata, and flexible header processing.
+ .
+ This package contains only the basic load balancer components. It does not
+ provide the Bastion API, clustering, firewall management, telemetry, Wazuh,
+ Redis, certificate automation, or frontend services.
+ .
+    OpenResty 1.29.2.4
+    ModSecurity v3 (v3.0.15) + ModSecurity-nginx (v1.0.4)
+    headers-more-nginx-module (bundled-with-openresty-1.29.2.4)
+    ngx_http_geoip2_module (3.4)
+    nginx_ajp_module (master)
+    ngx_brotli (master)
+    OWASP Core Rule Set (v4.26.0)
+    vhost templates, error templates, proxy profiles, ssl.conf
+    systemd unit, tmpfiles.d y logrotate
+
+Package: bastion-base
+Source: bastion-base
+Version: 1.31.1.1-20260925083818+git19af6b09~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 51148
+Pre-Depends: dpkg (>= 1.16.1), adduser
+Depends: libbrotli1 (>= 0.6.0), libc6 (>= 2.38), libcrypt1 (>= 1:4.1.0), libcurl4t64 (>= 7.16.2), libfuzzy2 (>= 2.13), libgcc-s1 (>= 3.3), libgd3 (>= 2.1.0~alpha~), libgeoip1t64 (>= 1.6.12), liblmdb0 (>= 0.9.7), liblua5.4-0 (>= 5.4.6), libmaxminddb0 (>= 1.0.2), libpcre2-8-0 (>= 10.22), libssl3t64 (>= 3.5.0), libstdc++6 (>= 14), libxml2 (>= 2.8.0), libxslt1.1 (>= 1.1.25), libyajl2 (>= 2.0.4), zlib1g (>= 1:1.1.4), libc6, libssl3, libpcre2-8-0, libpcre2-posix3, zlib1g, libxslt1.1, libgd3, libgeoip1t64 | libgeoip1, libxml2, libcurl4t64 | libcurl4, libyajl2, liblmdb0, liblua5.4-0, libfuzzy2, libmaxminddb0, systemd | systemd-sysv, ca-certificates, openssl, python3:any
+Recommends: logrotate
+Suggests: geoipupdate
+Conflicts: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Replaces: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Provides: httpd, httpd-cgi, nginx, edgewatch-bastion-base
+Filename: pool/main/b/bastion-base/Bastion-base_1.31.1.1-20260925083818+git19af6b09.deb13_amd64.deb
+Size: 9558524
+MD5sum: e63bb113d70304e464206d75ea9f519c
+SHA1: 8d1a1e1681732e78654bf6110bb1783e4df6f46d
+SHA256: f383bd84a65112c6af21527a1ea6eeb55944136beeacc3f7e9c92bac7a6fbcc4
+Section: web
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: OpenResty + ModSecurity + AJP + GeoIP2 + headers-more (Edgewatch bastion base)
+ basic OpenResty load balancer stack for Bastion
+ This package provides the base load balancer stack for Edgewatch Bastion.
+ It installs the core OpenResty runtime together with ModSecurity, AJP upstream
+ support, GeoIP2 integration, and HTTP header manipulation capabilities.
+ .
+ The stack is intended to act as the minimal HTTP and HTTPS reverse proxy layer
+ for Bastion deployments, providing traffic routing, WAF inspection, GeoIP-based
+ request metadata, and flexible header processing.
+ .
+ This package contains only the basic load balancer components. It does not
+ provide the Bastion API, clustering, firewall management, telemetry, Wazuh,
+ Redis, certificate automation, or frontend services.
+ .
+    OpenResty 1.29.2.4
+    ModSecurity v3 (v3.0.15) + ModSecurity-nginx (v1.0.4)
+    headers-more-nginx-module (bundled-with-openresty-1.29.2.4)
+    ngx_http_geoip2_module (3.4)
+    nginx_ajp_module (master)
+    ngx_brotli (master)
+    OWASP Core Rule Set (v4.26.0)
+    vhost templates, error templates, proxy profiles, ssl.conf
+    systemd unit, tmpfiles.d y logrotate
+
+Package: bastion-base
+Source: bastion-base
+Version: 1.31.1.1-20260925110530+gitc009756d~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 51148
+Pre-Depends: dpkg (>= 1.16.1), adduser
+Depends: libbrotli1 (>= 0.6.0), libc6 (>= 2.38), libcrypt1 (>= 1:4.1.0), libcurl4t64 (>= 7.16.2), libfuzzy2 (>= 2.13), libgcc-s1 (>= 3.3), libgd3 (>= 2.1.0~alpha~), libgeoip1t64 (>= 1.6.12), liblmdb0 (>= 0.9.7), liblua5.4-0 (>= 5.4.6), libmaxminddb0 (>= 1.0.2), libpcre2-8-0 (>= 10.22), libssl3t64 (>= 3.5.0), libstdc++6 (>= 14), libxml2 (>= 2.8.0), libxslt1.1 (>= 1.1.25), libyajl2 (>= 2.0.4), zlib1g (>= 1:1.1.4), libc6, libssl3, libpcre2-8-0, libpcre2-posix3, zlib1g, libxslt1.1, libgd3, libgeoip1t64 | libgeoip1, libxml2, libcurl4t64 | libcurl4, libyajl2, liblmdb0, liblua5.4-0, libfuzzy2, libmaxminddb0, systemd | systemd-sysv, ca-certificates, openssl, python3:any
+Recommends: logrotate
+Suggests: geoipupdate
+Conflicts: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Replaces: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Provides: httpd, httpd-cgi, nginx, edgewatch-bastion-base
+Filename: pool/main/b/bastion-base/Bastion-base_1.31.1.1-20260925110530+gitc009756d.deb13_amd64.deb
+Size: 9560692
+MD5sum: c9a0369255675d24c9d91482a9565b51
+SHA1: 33ce1f979e929ea88d8a0f90fedd7ac4e5cc9ab5
+SHA256: 5855721664b8de7bc686d425fc3c161b5cf9647b784c9e0d9ed41c871569dd68
+Section: web
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: OpenResty + ModSecurity + AJP + GeoIP2 + headers-more (Edgewatch bastion base)
+ basic OpenResty load balancer stack for Bastion
+ This package provides the base load balancer stack for Edgewatch Bastion.
+ It installs the core OpenResty runtime together with ModSecurity, AJP upstream
+ support, GeoIP2 integration, and HTTP header manipulation capabilities.
+ .
+ The stack is intended to act as the minimal HTTP and HTTPS reverse proxy layer
+ for Bastion deployments, providing traffic routing, WAF inspection, GeoIP-based
+ request metadata, and flexible header processing.
+ .
+ This package contains only the basic load balancer components. It does not
+ provide the Bastion API, clustering, firewall management, telemetry, Wazuh,
+ Redis, certificate automation, or frontend services.
+ .
+    OpenResty 1.29.2.4
+    ModSecurity v3 (v3.0.15) + ModSecurity-nginx (v1.0.4)
+    headers-more-nginx-module (bundled-with-openresty-1.29.2.4)
+    ngx_http_geoip2_module (3.4)
+    nginx_ajp_module (master)
+    ngx_brotli (master)
+    OWASP Core Rule Set (v4.26.0)
+    vhost templates, error templates, proxy profiles, ssl.conf
+    systemd unit, tmpfiles.d y logrotate
+
+Package: bastion-base
+Source: bastion-base
+Version: 1.31.1.1-20260925123920+gitd0ec1ed9~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 51148
+Pre-Depends: dpkg (>= 1.16.1), adduser
+Depends: libbrotli1 (>= 0.6.0), libc6 (>= 2.38), libcrypt1 (>= 1:4.1.0), libcurl4t64 (>= 7.16.2), libfuzzy2 (>= 2.13), libgcc-s1 (>= 3.3), libgd3 (>= 2.1.0~alpha~), libgeoip1t64 (>= 1.6.12), liblmdb0 (>= 0.9.7), liblua5.4-0 (>= 5.4.6), libmaxminddb0 (>= 1.0.2), libpcre2-8-0 (>= 10.22), libssl3t64 (>= 3.5.0), libstdc++6 (>= 14), libxml2 (>= 2.8.0), libxslt1.1 (>= 1.1.25), libyajl2 (>= 2.0.4), zlib1g (>= 1:1.1.4), libc6, libssl3, libpcre2-8-0, libpcre2-posix3, zlib1g, libxslt1.1, libgd3, libgeoip1t64 | libgeoip1, libxml2, libcurl4t64 | libcurl4, libyajl2, liblmdb0, liblua5.4-0, libfuzzy2, libmaxminddb0, systemd | systemd-sysv, ca-certificates, openssl, python3:any
+Recommends: logrotate
+Suggests: geoipupdate
+Conflicts: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Replaces: nginx, nginx-core, nginx-full, nginx-light, nginx-extras, openresty, edgewatch-bastion-base
+Provides: httpd, httpd-cgi, nginx, edgewatch-bastion-base
+Filename: pool/main/b/bastion-base/Bastion-base_1.31.1.1-20260925123920+gitd0ec1ed9.deb13_amd64.deb
+Size: 9558652
+MD5sum: 72430f8686590d72db84ce1939d3da8d
+SHA1: 55faf8d2d0889edf8bd419d79aa84beb19c1339e
+SHA256: e8ddf4cc10507f77dc2e3aa5764ed3f9602a79ee05a90779f364274f9215f23d
+Section: web
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: OpenResty + ModSecurity + AJP + GeoIP2 + headers-more (Edgewatch bastion base)
+ basic OpenResty load balancer stack for Bastion
+ This package provides the base load balancer stack for Edgewatch Bastion.
+ It installs the core OpenResty runtime together with ModSecurity, AJP upstream
+ support, GeoIP2 integration, and HTTP header manipulation capabilities.
+ .
+ The stack is intended to act as the minimal HTTP and HTTPS reverse proxy layer
+ for Bastion deployments, providing traffic routing, WAF inspection, GeoIP-based
+ request metadata, and flexible header processing.
+ .
+ This package contains only the basic load balancer components. It does not
+ provide the Bastion API, clustering, firewall management, telemetry, Wazuh,
+ Redis, certificate automation, or frontend services.
+ .
+    OpenResty 1.29.2.4
+    ModSecurity v3 (v3.0.15) + ModSecurity-nginx (v1.0.4)
+    headers-more-nginx-module (bundled-with-openresty-1.29.2.4)
+    ngx_http_geoip2_module (3.4)
+    nginx_ajp_module (master)
+    ngx_brotli (master)
+    OWASP Core Rule Set (v4.26.0)
+    vhost templates, error templates, proxy profiles, ssl.conf
+    systemd unit, tmpfiles.d y logrotate
+
+Package: bastion-telemetry
+Version: 0.1.0-20260918091016+gitcca308b0~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 16188
+Depends: bastion-base, ca-certificates, debconf (>= 0.5) | debconf-2.0, csync2, curl, certbot, fail2ban
+Recommends: auditd, strongswan-starter
+Filename: pool/main/b/bastion-telemetry/Bastion-telemetry_0.1.0-20260918091016+gitcca308b0.deb13_amd64.deb
+Size: 4511816
+MD5sum: 38afb01bce384a3de872bcdbb205f7b3
+SHA1: 99a9d124ace782ed7e9600175ef9104222fc5adb
+SHA256: 5eb227ca45d7622b42a01e0cac4a1c181e6834a1c9c539aba86ce66de1a9fc88
+Section: admin
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: Edgewatch Bastion telemetry / node agent (outbound endpoint client)
+ ew-node-agent and the ewctl CLI. The agent maintains the node's outbound,
+ mutually-authenticated (mTLS) connection to the Edgewatch endpoint server:
+ enrollment, signed config pull + verification, heartbeats, command execution
+ via hooks, and telemetry. Nodes expose no inbound management API.
+ .
+ Requires the bastion-base package (the OpenResty/ModSecurity bastion data
+ plane this agent reports on and reconfigures).
+
+Package: bastion-telemetry
+Version: 0.1.0-20260925075418+gitb26029ce~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 16232
+Depends: bastion-base, ca-certificates, debconf (>= 0.5) | debconf-2.0, csync2, curl, certbot, fail2ban
+Recommends: auditd, strongswan-starter
+Filename: pool/main/b/bastion-telemetry/Bastion-telemetry_0.1.0-20260925075418+gitb26029ce.deb13_amd64.deb
+Size: 4529224
+MD5sum: be6e745d80e694e2b586e59ec5e86d96
+SHA1: 87fbc68810b7eed79333afd5997455b99a0ad37b
+SHA256: e9dc41217ff0c8a73b0d16661f1e56cf5eee778b2c5d3279187beb91e04d2d62
+Section: admin
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: Edgewatch Bastion telemetry / node agent (outbound endpoint client)
+ ew-node-agent and the ewctl CLI. The agent maintains the node's outbound,
+ mutually-authenticated (mTLS) connection to the Edgewatch endpoint server:
+ enrollment, signed config pull + verification, heartbeats, command execution
+ via hooks, and telemetry. Nodes expose no inbound management API.
+ .
+ Requires the bastion-base package (the OpenResty/ModSecurity bastion data
+ plane this agent reports on and reconfigures).
+
+Package: bastion-telemetry
+Version: 0.1.0-20260925084914+git19af6b09~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 16232
+Depends: bastion-base, ca-certificates, debconf (>= 0.5) | debconf-2.0, csync2, curl, certbot, fail2ban
+Recommends: auditd, strongswan-starter
+Filename: pool/main/b/bastion-telemetry/Bastion-telemetry_0.1.0-20260925084914+git19af6b09.deb13_amd64.deb
+Size: 4530540
+MD5sum: ba9ad1abca3ac7dbdf474cd58bef57fb
+SHA1: 4484102163fc6e9dd79153cd24a519b214645724
+SHA256: bd5659b4c466474bc07836605943258497fa2216bf5e50e58de33df43d15ce43
+Section: admin
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: Edgewatch Bastion telemetry / node agent (outbound endpoint client)
+ ew-node-agent and the ewctl CLI. The agent maintains the node's outbound,
+ mutually-authenticated (mTLS) connection to the Edgewatch endpoint server:
+ enrollment, signed config pull + verification, heartbeats, command execution
+ via hooks, and telemetry. Nodes expose no inbound management API.
+ .
+ Requires the bastion-base package (the OpenResty/ModSecurity bastion data
+ plane this agent reports on and reconfigures).
+
+Package: bastion-telemetry
+Version: 0.1.0-20260925111610+gitc009756d~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 16232
+Depends: bastion-base, ca-certificates, debconf (>= 0.5) | debconf-2.0, csync2, curl, certbot, fail2ban
+Recommends: auditd, strongswan-starter
+Filename: pool/main/b/bastion-telemetry/Bastion-telemetry_0.1.0-20260925111610+gitc009756d.deb13_amd64.deb
+Size: 4529312
+MD5sum: 8ba6ebba1a3eb07c84f8fc11fe4da869
+SHA1: 63e886b5021bcc5b248899d82861f61773e8bf88
+SHA256: f10084f4e12e57501d0d815b3aba8c0057c5ec155a90292cc47558acae7591a3
+Section: admin
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: Edgewatch Bastion telemetry / node agent (outbound endpoint client)
+ ew-node-agent and the ewctl CLI. The agent maintains the node's outbound,
+ mutually-authenticated (mTLS) connection to the Edgewatch endpoint server:
+ enrollment, signed config pull + verification, heartbeats, command execution
+ via hooks, and telemetry. Nodes expose no inbound management API.
+ .
+ Requires the bastion-base package (the OpenResty/ModSecurity bastion data
+ plane this agent reports on and reconfigures).
+
+Package: bastion-telemetry
+Version: 0.1.0-20260925124919+gitd0ec1ed9~deb13
+Architecture: amd64
+Maintainer: Edgewatch Operations <ops@edgewatch.net>
+Installed-Size: 16240
+Depends: bastion-base, ca-certificates, debconf (>= 0.5) | debconf-2.0, csync2, curl, certbot, fail2ban
+Recommends: auditd, strongswan-starter
+Filename: pool/main/b/bastion-telemetry/Bastion-telemetry_0.1.0-20260925124919+gitd0ec1ed9.deb13_amd64.deb
+Size: 4532272
+MD5sum: 2a338210ddf8523acdb72b33b3334647
+SHA1: 3cd614b1737d212c27627807eacc962c1625f2b4
+SHA256: 89ce3bc082b2fc00c1176b2efcafbdffc9f2ae71a78dc5854f4eac26a29f9848
+Section: admin
+Priority: optional
+Homepage: https://github.com/edgewatch/bastion
+Description: Edgewatch Bastion telemetry / node agent (outbound endpoint client)
+ ew-node-agent and the ewctl CLI. The agent maintains the node's outbound,
+ mutually-authenticated (mTLS) connection to the Edgewatch endpoint server:
+ enrollment, signed config pull + verification, heartbeats, command execution
+ via hooks, and telemetry. Nodes expose no inbound management API.
+ .
+ Requires the bastion-base package (the OpenResty/ModSecurity bastion data
+ plane this agent reports on and reconfigures).
+
