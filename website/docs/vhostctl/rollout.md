@@ -8,20 +8,24 @@ sidebar_position: 2
 # vhostctl Staged Rollout
 
 Operator guide for enabling nginx apply through `vhostctl` on enrolled nodes.
-There is no fleet automation in the packaging repo; apply flags via
-`/etc/edgewatch/endpoint.yaml` (see comments in the package sample config).
+New nodes receive Stage A via the packaged sample `endpoint.yaml`. Operators can
+also flip `enabled` / `shadow_mode` from the console Advanced config page, or
+edit `/etc/edgewatch/endpoint.yaml` directly.
 
 ## Feature flags
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `vhostctl.enabled` | `false` | Master switch. Off = legacy builtin only. |
+| `vhostctl.enabled` | `false` when the block is omitted (compiled); `true` in the shipped new-node template | Master switch. Off = legacy builtin only. |
 | `vhostctl.shadow_mode` | `true` when enabled and unset | Read-only Plan/Validate parity; **no** vhostctl writes. |
-| `vhostctl.drift_policy` | `overwrite` | Use `keep-live` before write-mode canary. |
+| `vhostctl.drift_policy` | `overwrite` when omitted; `keep-live` in the shipped Stage A template | Use `keep-live` before write-mode canary. |
 | `vhostctl.post_apply_probe_enabled` | `false` | After successful reload, run probe before commit. |
 | `vhostctl.post_apply_probe_command` | `[]` | Argv for probe (e.g. curl stub_status). Empty = skip. |
 
 `WriteMode` = `enabled && !shadow_mode`.
+
+Omitting the `vhostctl:` block keeps the compiled defaults (`enabled: false`).
+Upgrading an already-deployed agent does **not** silently turn vhostctl on.
 
 ### Emergency fallback
 
@@ -31,17 +35,21 @@ There is no fleet automation in the packaging repo; apply flags via
 
 ## Stages A–E
 
-### Stage A — Dev / CI shadow
+### Stage A — Dev / CI shadow (shipped for new nodes)
 
 **Config**
 
 ```yaml
 vhostctl:
   enabled: true
-  # shadow_mode defaults to true
-  drift_policy: overwrite
+  shadow_mode: true
+  drift_policy: keep-live
   post_apply_probe_enabled: false
 ```
+
+`drift_policy: keep-live` is inert while shadow mode is on; it becomes active
+only when shadow is turned off, so a later write-mode flip does not inherit
+`overwrite`.
 
 **Exit criteria**
 
