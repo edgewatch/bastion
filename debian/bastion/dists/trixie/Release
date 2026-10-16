@@ -1,0 +1,17 @@
+Origin: Edgewatch Bastion
+Label: bastion
+Suite: trixie
+Codename: trixie
+Date: Fri, 16 Oct 2026 11:33:38 UTC
+Architectures: amd64
+Components: main
+Description: Edgewatch Bastion APT repository (bastion-base, bastion-telemetry)
+MD5Sum:
+ 4e254e7f80c370a497e4094e5d95fbed 19540 main/binary-amd64/Packages
+ 0fe95d74355e44beed1e96f57b67405a 2896 main/binary-amd64/Packages.gz
+SHA256:
+ 68adc77d77a9a453076255d8eb751f600d005163336eeac3afa8f6d44e343941 19540 main/binary-amd64/Packages
+ c12ff7333d093dd9f41fca67902347fbd8ae6ae2084c33f4f02b84a7c19c2bd4 2896 main/binary-amd64/Packages.gz
+SHA512:
+ f07ae341e22797cbedffb707e24f47601f5b6e73fbed1eb55bccae386e65ae1974bcf189af4ebf06aec8b44cc18abf35d9b273582e5263fff24f6ba11fc8a9bc 19540 main/binary-amd64/Packages
+ ca1e45e86ce469a951ae1e9b7e8124fe842421031b8d04eb4e35cb4fe06a83141bf9f7d0886e4616bba333740a83b6a3de7f8422ac3a2ff54f554533a7cc2eec 2896 main/binary-amd64/Packages.gz
