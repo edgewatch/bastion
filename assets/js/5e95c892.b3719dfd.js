@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkedgewatch_bastion_docs=globalThis.webpackChunkedgewatch_bastion_docs||[]).push([[647],{7121(e,s,a){a.r(s),a.d(s,{default:()=>n});a(6540);var c=a(4164),r=a(7559),t=a(5500),o=a(2831),d=a(5201),h=a(4848);function n(e){return(0,h.jsx)(t.e3,{className:(0,c.A)(r.G.wrapper.docsPages),children:(0,h.jsx)(d.A,{children:(0,o.v)(e.route.routes)})})}}}]);
