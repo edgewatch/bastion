@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkedgewatch_bastion_docs=globalThis.webpackChunkedgewatch_bastion_docs||[]).push([[532],{5217(a,s,t){t.r(s),t.d(s,{default:()=>o});t(6540);var e=t(6347),c=t(4848);function o(){return(0,c.jsx)(e.rd,{to:"/"})}}}]);
